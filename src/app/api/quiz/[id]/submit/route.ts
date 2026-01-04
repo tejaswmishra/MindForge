@@ -5,21 +5,26 @@ import { eq } from 'drizzle-orm';
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    // ✅ Correctly await params
+    const { id: quizId } = await context.params;
+
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
-    const quizId = await params.id;
     const { responses, totalTime } = await req.json();
 
     console.log('Submitting quiz:', quizId, 'Responses:', responses.length);
 
     let correctCount = 0;
-    const results = [];
+    const results: any[] = [];
 
     // Process each response
     for (const response of responses) {
@@ -34,20 +39,24 @@ export async function POST(
 
       if (!questionData) continue;
 
-      const isCorrect = user_answer.toLowerCase().trim() === 
-                       questionData.correct_answer.toLowerCase().trim();
-      
+      const isCorrect =
+        user_answer.toLowerCase().trim() ===
+        questionData.correct_answer.toLowerCase().trim();
+
       if (isCorrect) correctCount++;
 
       // Save response to database
-      const [savedResponse] = await db.insert(quiz_responses).values({
-        quiz_id: quizId,
-        user_id: user.id,
-        question_id,
-        user_answer,
-        is_correct: isCorrect,
-        time_taken,
-      }).returning();
+      const [savedResponse] = await db
+        .insert(quiz_responses)
+        .values({
+          quiz_id: quizId,
+          user_id: user.id,
+          question_id,
+          user_answer,
+          is_correct: isCorrect,
+          time_taken,
+        })
+        .returning();
 
       results.push({
         ...savedResponse,
@@ -71,8 +80,7 @@ export async function POST(
         responses: results,
       },
     });
-
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error submitting quiz:', error);
     return NextResponse.json(
       { error: 'Failed to submit quiz' },

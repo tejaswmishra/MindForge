@@ -5,15 +5,20 @@ import { eq, asc } from 'drizzle-orm';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    // ✅ await params correctly
+    const { id: quizId } = await context.params;
+
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
-    const quizId = await params.id;
     console.log('Fetching quiz:', quizId);
 
     // Get quiz details
@@ -24,7 +29,10 @@ export async function GET(
       .limit(1);
 
     if (!quizData) {
-      return NextResponse.json({ error: 'Quiz not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Quiz not found' },
+        { status: 404 }
+      );
     }
 
     // Get quiz questions in order
@@ -47,8 +55,7 @@ export async function GET(
         questions: questionsData,
       },
     });
-
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching quiz:', error);
     return NextResponse.json(
       { error: 'Failed to fetch quiz' },

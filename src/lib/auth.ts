@@ -1,24 +1,43 @@
-import { auth } from '@clerk/nextjs/server';
-import { db, users } from '@/lib/database';
-import { eq } from 'drizzle-orm';
+import { auth, currentUser } from "@clerk/nextjs/server";
+import { db, users } from "@/lib/database";
+import { eq } from "drizzle-orm";
 
 export async function getCurrentUser() {
-  try {
-    const { userId } = await auth();
-    
-    if (!userId) {
-      return null;
-    }
+  const { userId } = await auth();
+  if (!userId) return null;
 
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.clerk_id, userId))
-      .limit(1);
+  // 1️⃣ Check DB
+  let [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.clerk_id, userId))
+    .limit(1);
 
-    return user || null;
-  } catch (error) {
-    console.error('Error getting current user:', error);
-    return null;
-  }
+  if (user) return user;
+
+  // 2️⃣ Fetch Clerk user
+  const clerkUser = await currentUser();
+  if (!clerkUser) return null;
+
+  const email = clerkUser.emailAddresses[0]?.emailAddress;
+  if (!email) throw new Error("No email found");
+
+  // ✅ SAFE, NON-NULL NAME
+  const name =
+    [clerkUser.firstName, clerkUser.lastName]
+      .filter(Boolean)
+      .join(" ") ||
+    email.split("@")[0]; // fallback
+
+  // 3️⃣ Insert into DB
+  [user] = await db
+    .insert(users)
+    .values({
+      clerk_id: userId,
+      email,
+      name, 
+    })
+    .returning();
+
+  return user;
 }

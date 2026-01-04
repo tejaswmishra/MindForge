@@ -1,4 +1,5 @@
 // src/types/quiz.ts
+
 export interface QuizFormData {
   title: string;
   syllabusId: string;
@@ -32,9 +33,32 @@ export interface QuizAttempt {
   total_time: number;
 }
 
+export interface QuizDTO {
+  id: string;
+  title: string;
+  syllabus_id: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  total_questions: number;
+  time_limit?: number;
+  created_at: Date;
+}
+
+export interface QuizResponseDTO {
+  id: string;
+  quiz_id: string;
+  question_id: string;
+  user_answer: string;
+  is_correct: boolean;
+  time_taken: number;
+  question?: string;
+  correct_answer?: string;
+  explanation?: string;
+  created_at?: Date;
+}
+
 export interface QuizResult {
-  quiz: Quiz;
-  responses: QuizResponse[];
+  quiz: QuizDTO;
+  responses: QuizResponseDTO[];
   score: number;
   total_questions: number;
   time_taken: number;
@@ -51,5 +75,3 @@ export interface QuizResult {
     hard: { correct: number; total: number; percentage: number };
   };
 }
-
-// ---

@@ -45,7 +45,7 @@ export default function QuizPage() {
         type="number"
         placeholder="Number of Questions"
         value={numQuestions}
-        onChange={(e) => setNumQuestions(e.target.value)}
+        onChange={(e) => setNumQuestions(parseInt(e.target.value, 10) || 0)}
         className="border p-2 w-full mb-3"
       />
 
